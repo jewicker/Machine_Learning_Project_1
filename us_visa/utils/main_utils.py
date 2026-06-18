@@ -1,0 +1,142 @@
+import os
+import sys
+import tempfile
+from datetime import datetime
+
+import numpy as np
+import dill
+import yaml
+from pandas import DataFrame
+
+from us_visa.exception import USvisaException
+from us_visa.logger import logging
+
+
+def _ensure_directory_exists(file_path: str) -> str:
+    """Ensure the directory exists and return the directory path.
+    Falls back to a temp directory on permission errors."""
+    dir_path = os.path.dirname(file_path)
+    try:
+        os.makedirs(dir_path, exist_ok=True)
+        return dir_path
+    except OSError as e:
+        fallback_dir = os.path.join(
+            tempfile.gettempdir(),
+            "artifact_fallback_" + datetime.now().strftime("%m_%d_%Y_%H_%M_%S"),
+        )
+        os.makedirs(fallback_dir, exist_ok=True)
+        logging.warning(
+            f"Could not create directory '{dir_path}': {e}. Using fallback directory '{fallback_dir}'."
+        )
+        return fallback_dir
+
+
+def read_yaml_file(file_path: str) -> dict:
+    try:
+        with open(file_path, "rb") as yaml_file:
+            return yaml.safe_load(yaml_file)
+
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+    
+
+
+def write_yaml_file(file_path: str, content: object, replace: bool = False) -> str:
+    try:
+        if replace:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        dir_path = _ensure_directory_exists(file_path)
+        dest_file_path = os.path.join(dir_path, os.path.basename(file_path))
+        with open(dest_file_path, "w") as file:
+            yaml.dump(content, file)
+        return dest_file_path
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+    
+
+
+
+def load_object(file_path: str) -> object:
+    logging.info("Entered the load_object method of utils")
+
+    try:
+
+        with open(file_path, "rb") as file_obj:
+            obj = dill.load(file_obj)
+
+        logging.info("Exited the load_object method of utils")
+
+        return obj
+
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+    
+
+
+def save_numpy_array_data(file_path: str, array: np.array) -> str:
+    """
+    Save numpy array data to file
+    file_path: str location of file to save
+    array: np.array data to save
+    """
+    try:
+        dir_path = _ensure_directory_exists(file_path)
+        dest_file_path = os.path.join(dir_path, os.path.basename(file_path))
+        with open(dest_file_path, 'wb') as file_obj:
+            np.save(file_obj, array)
+        return dest_file_path
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+    
+
+
+
+def load_numpy_array_data(file_path: str) -> np.array:
+    """
+    load numpy array data from file
+    file_path: str location of file to load
+    return: np.array data loaded
+    """
+    try:
+        with open(file_path, 'rb') as file_obj:
+            return np.load(file_obj)
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+
+
+
+
+def save_object(file_path: str, obj: object) -> str:
+    logging.info("Entered the save_object method of utils")
+
+    try:
+        dir_path = _ensure_directory_exists(file_path)
+        dest_file_path = os.path.join(dir_path, os.path.basename(file_path))
+        with open(dest_file_path, "wb") as file_obj:
+            dill.dump(obj, file_obj)
+
+        logging.info("Exited the save_object method of utils")
+        return dest_file_path
+    except Exception as e:
+        raise USvisaException(e, sys) from e
+
+
+
+def drop_columns(df: DataFrame, cols: list)-> DataFrame:
+
+    """
+    drop the columns form a pandas DataFrame
+    df: pandas DataFrame
+    cols: list of columns to be dropped
+    """
+    logging.info("Entered drop_columns methon of utils")
+
+    try:
+        df = df.drop(columns=cols, axis=1)
+
+        logging.info("Exited the drop_columns method of utils")
+        
+        return df
+    except Exception as e:
+        raise USvisaException(e, sys) from e
