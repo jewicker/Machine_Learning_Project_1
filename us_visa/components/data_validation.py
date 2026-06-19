@@ -2,10 +2,8 @@ import json
 import sys
 
 import pandas as pd
-from evidently.model_profile import Profile
-from evidently.model_profile.sections import DataDriftProfileSection
-
 from pandas import DataFrame
+from scipy import stats
 
 from us_visa.exception import USvisaException
 from us_visa.logger import logging
@@ -90,21 +88,75 @@ class DataValidation:
         On Failure  :   Write an exception log and then raise an exception
         """
         try:
-            data_drift_profile = Profile(sections=[DataDriftProfileSection()])
+            # Lightweight drift detection when Evidently is not available or incompatible.
+            # Numeric columns: use KS test. Categorical columns: use chi-square test.
+            results = {}
+            drifted = 0
+            total = 0
+            for col in reference_df.columns:
+                if col not in current_df.columns:
+                    continue
+                total += 1
+                ref = reference_df[col].dropna()
+                cur = current_df[col].dropna()
+                col_report = {}
+                try:
+                    if pd.api.types.is_numeric_dtype(ref) and pd.api.types.is_numeric_dtype(cur):
+                        # Two-sample Kolmogorov-Smirnov test
+                        if len(ref) < 2 or len(cur) < 2:
+                            pvalue = 1.0
+                        else:
+                            _, pvalue = stats.ks_2samp(ref, cur)
+                        drift = pvalue < 0.05
+                        col_report["method"] = "ks_2samp"
+                        col_report["p_value"] = float(pvalue)
+                    else:
+                        # Chi-square on category counts
+                        ref_counts = ref.astype(str).value_counts()
+                        cur_counts = cur.astype(str).value_counts()
+                        cats = list(set(ref_counts.index) | set(cur_counts.index))
+                        ref_vals = [ref_counts.get(c, 0) for c in cats]
+                        cur_vals = [cur_counts.get(c, 0) for c in cats]
+                        table = [ref_vals, cur_vals]
+                        # If any expected cell is zero or too small, fall back to p=1
+                        try:
+                            chi2, pvalue, _, _ = stats.chi2_contingency(table)
+                        except Exception:
+                            pvalue = 1.0
+                        drift = pvalue < 0.05
+                        col_report["method"] = "chi2"
+                        col_report["p_value"] = float(pvalue)
+                except Exception as e:
+                    col_report["error"] = str(e)
+                    drift = False
 
-            data_drift_profile.calculate(reference_df, current_df)
+                col_report["drift"] = bool(drift)
+                results[col] = col_report
+                if drift:
+                    drifted += 1
 
-            report = data_drift_profile.json()
-            json_report = json.loads(report)
+            n_features = total
+            n_drifted_features = drifted
+            # dataset drift if >=50% of features drifted
+            dataset_drift = (n_features > 0) and (n_drifted_features / n_features >= 0.5)
+
+            json_report = {
+                "data_drift": {
+                    "data": {
+                        "metrics": {
+                            "n_features": n_features,
+                            "n_drifted_features": n_drifted_features,
+                            "dataset_drift": bool(dataset_drift),
+                        },
+                        "details": results,
+                    }
+                }
+            }
 
             write_yaml_file(file_path=self.data_validation_config.drift_report_file_path, content=json_report)
 
-            n_features = json_report["data_drift"]["data"]["metrics"]["n_features"]
-            n_drifted_features = json_report["data_drift"]["data"]["metrics"]["n_drifted_features"]
-
             logging.info(f"{n_drifted_features}/{n_features} drift detected.")
-            drift_status = json_report["data_drift"]["data"]["metrics"]["dataset_drift"]
-            return drift_status
+            return bool(dataset_drift)
         except Exception as e:
             raise USvisaException(e, sys) from e
 

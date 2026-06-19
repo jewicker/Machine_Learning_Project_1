@@ -1,4 +1,6 @@
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -15,9 +17,10 @@ from us_visa.pipline.training_pipeline import TrainPipeline
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
-templates = Jinja2Templates(directory='templates')
+templates = Jinja2Templates(directory=str(BASE_DIR / 'templates'))
 
 origins = ["*"]
 
@@ -103,7 +106,7 @@ async def predictRouteClient(request: Request):
         value = model_predictor.predict(dataframe=usvisa_df)[0]
 
         status = None
-        if value == 1:
+        if value == 0:
             status = "Visa-approved"
         else:
             status = "Visa Not-Approved"
