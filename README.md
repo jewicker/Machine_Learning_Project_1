@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MLOPs-Production-Ready-Machine-Learning-Project
 
 Youtube Playlist: https://youtube.com/playlist?list=PLkz_y24mlSJZvJOj1UXiJPVRQrNFdNEXX&si=FRFLpnve9MS6Rii9
@@ -131,3 +132,6 @@ export AWS_SECRET_ACCESS_KEY=<AWS_SECRET_ACCESS_KEY>
     
 
 
+=======
+# Machine_Learning_Project_1
+>>>>>>> e25ef5790a72e35bd2ffb19459e75455ee05720e
