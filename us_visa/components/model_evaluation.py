@@ -73,7 +73,7 @@ class ModelEvaluation:
             x, y = test_df.drop(TARGET_COLUMN, axis=1), test_df[TARGET_COLUMN]
             y = y.replace(
                 TargetValueMapping()._asdict()
-            )
+            ).astype(int)
 
             # trained_model = load_object(file_path=self.model_trainer_artifact.trained_model_file_path)
             trained_model_f1_score = self.model_trainer_artifact.metric_artifact.f1_score

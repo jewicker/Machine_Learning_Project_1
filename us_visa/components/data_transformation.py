@@ -108,7 +108,7 @@ class DataTransformation:
                 train_df = DataTransformation.read_data(file_path=self.data_ingestion_artifact.trained_file_path)
                 test_df = DataTransformation.read_data(file_path=self.data_ingestion_artifact.test_file_path)
 
-                input_feature_train_df = train_df.drop(columns=[TARGET_COLUMN], axis=1)
+                input_feature_train_df = train_df.drop(columns=[TARGET_COLUMN])
                 target_feature_train_df = train_df[TARGET_COLUMN]
 
                 logging.info("Got train features and test features of Training dataset")
@@ -125,10 +125,10 @@ class DataTransformation:
                 
                 target_feature_train_df = target_feature_train_df.replace(
                     TargetValueMapping()._asdict()
-                )
+                ).astype(int)
 
 
-                input_feature_test_df = test_df.drop(columns=[TARGET_COLUMN], axis=1)
+                input_feature_test_df = test_df.drop(columns=[TARGET_COLUMN])
 
                 target_feature_test_df = test_df[TARGET_COLUMN]
 
@@ -142,8 +142,8 @@ class DataTransformation:
                 logging.info("drop the columns in drop_cols of Test dataset")
 
                 target_feature_test_df = target_feature_test_df.replace(
-                TargetValueMapping()._asdict()
-                )
+                    TargetValueMapping()._asdict()
+                ).astype(int)
 
                 logging.info("Got train features and test features of Testing dataset")
 

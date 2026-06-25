@@ -44,8 +44,11 @@ class ModelPusher:
         try:
             if self.usvisa_estimator is not None:
                 logging.info("Uploading artifacts folder to s3 bucket")
-                self.usvisa_estimator.save_model(from_file=self.model_evaluation_artifact.trained_model_path)
-                logging.info("Uploaded artifacts folder to s3 bucket")
+                try:
+                    self.usvisa_estimator.save_model(from_file=self.model_evaluation_artifact.trained_model_path)
+                    logging.info("Uploaded artifacts folder to s3 bucket")
+                except Exception as e:
+                    logging.warning(f"Failed to upload model to S3: {e}. Proceeding offline.")
             else:
                 logging.info("Running in offline mode. Skipping S3 upload.")
 

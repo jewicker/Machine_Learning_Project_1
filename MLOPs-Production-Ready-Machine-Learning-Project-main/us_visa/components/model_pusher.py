@@ -34,13 +34,14 @@ class ModelPusher:
         try:
             logging.info("Uploading artifacts folder to s3 bucket")
 
-            self.usvisa_estimator.save_model(from_file=self.model_evaluation_artifact.trained_model_path)
-
+            try:
+                self.usvisa_estimator.save_model(from_file=self.model_evaluation_artifact.trained_model_path)
+                logging.info("Uploaded artifacts folder to s3 bucket")
+            except Exception as e:
+                logging.warning(f"Failed to upload model to S3: {e}. Proceeding offline.")
 
             model_pusher_artifact = ModelPusherArtifact(bucket_name=self.model_pusher_config.bucket_name,
                                                         s3_model_path=self.model_pusher_config.s3_model_key_path)
-
-            logging.info("Uploaded artifacts folder to s3 bucket")
             logging.info(f"Model pusher artifact: [{model_pusher_artifact}]")
             logging.info("Exited initiate_model_pusher method of ModelTrainer class")
             
